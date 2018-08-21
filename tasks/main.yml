@@ -1,0 +1,99 @@
+---
+
+- assert:
+    that:
+      - pki.basepath is defined
+
+- name: create directories
+  with_items:
+    - "{{ pki.basepath }}"
+    - "{{ pki.basepath }}/etc"
+    - "{{ pki.basepath }}/ca"
+    - "{{ pki.basepath }}/ca/crl"
+    - "{{ pki.basepath }}/ca/certs"
+    - "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}"
+    - "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db"
+  file:
+    path: "{{ item }}"
+    state: directory
+
+- name: create private directory for keys
+  file:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/private"
+    state: directory
+    mode: 00700
+
+- name: create config file for {{ dn.CN }}
+  template:
+    src: root-ca.conf.j2
+    dest: "{{ pki.basepath }}/etc/{{ dn.CN|replace(' ','') }}.conf"
+    backup: true
+
+- name: check for db
+  stat:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/db"
+  register: db
+
+- name: check for attr
+  stat:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/db.attr"
+  register: attr
+
+- name: check for certificate serial
+  stat:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/cert.serial"
+  register: certserial
+
+- name: check for crl serial
+  stat:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/crl.serial"
+  register: crlserial
+
+- name: create db
+  when: not db.stat.exists
+  file:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/db"
+    state: touch
+
+- name: create attr
+  when: not attr.stat.exists
+  file:
+    dest: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/db.attr"
+    state: touch
+
+- name: create certificate serial
+  when: not certserial.stat.exists
+  copy:
+    content: "01\n"
+    dest: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/cert.serial"
+
+- name: create crl serial
+  when: not crlserial.stat.exists
+  copy:
+    content: "01\n"
+    dest: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/db/crl.serial"
+
+- name: key for {{ dn.CN }} is present
+  no_log: true
+  openssl_privatekey:
+    path: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}/private/{{ dn.CN|replace(' ','') }}.key"
+
+- name: create csr
+  command: openssl req -new -config etc/{{ dn.CN|replace(' ','') }}.conf -out ca/{{ dn.CN|replace(' ','') }}.csr -key ca/{{ dn.CN|replace(' ','') }}/private/{{ dn.CN|replace(' ','') }}.key
+  args:
+    chdir: "{{ pki.basepath }}"
+    creates: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}.csr"
+
+- name: sign CA Root cert
+  command: openssl ca -batch -selfsign -config etc/{{ dn.CN|replace(' ','') }}.conf -in ca/{{ dn.CN|replace(' ','') }}.csr -out ca/{{ dn.CN|replace(' ','') }}.cert -extensions root_ca_ext
+  args:
+    chdir: "{{ pki.basepath }}"
+    creates: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}.cert"
+  when: sign == dn.CN
+
+- name: sign CA cert
+  command: openssl ca -batch -config etc/{{ sign|replace(' ','') }}.conf -in ca/{{ dn.CN|replace(' ','') }}.csr -out ca/{{ dn.CN|replace(' ','') }}.cert -extensions signing_ca_ext
+  args:
+    chdir: "{{ pki.basepath }}"
+    creates: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}.cert"
+  when: sign != dn.CN
