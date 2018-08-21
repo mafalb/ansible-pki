@@ -1,0 +1,31 @@
+---
+
+- hosts: localhost
+  vars:
+    pki:
+      basepath: /tmp/simple-pki
+  roles:
+
+    - role: pki
+      dn:
+        domainComponents:
+        - com
+        - example
+        C: AT
+        ST: Wien
+        O: My Organization
+        OU: My Organizational Unit
+        CN: The Name of the Root CA
+      sign: The Name of the Root CA
+
+    - role: pki
+      dn:
+        domainComponents:
+        - com
+        - example
+        C: AT
+        ST: Wien
+        O: My Organization
+        OU: My Organizational Unit
+        CN: The Name of the Signing CA
+      sign: The Name of the Root CA
