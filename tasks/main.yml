@@ -25,7 +25,7 @@
 
 - name: create config file for {{ dn.CN }}
   template:
-    src: root-ca.conf.j2
+    src: "{{ type }}-ca.conf.j2"
     dest: "{{ pki.basepath }}/etc/{{ dn.CN|replace(' ','') }}.conf"
     backup: true
 
@@ -97,3 +97,9 @@
     chdir: "{{ pki.basepath }}"
     creates: "{{ pki.basepath }}/ca/{{ dn.CN|replace(' ','') }}.cert"
   when: sign != dn.CN
+
+- name: config for server certificates
+  template:
+    src: server.conf.j2
+    dest: "{{ pki.basepath }}/etc/server.conf"
+    backup: true
