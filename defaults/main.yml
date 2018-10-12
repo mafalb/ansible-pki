@@ -1,0 +1,14 @@
+#! vim: ft=yaml ts=2:
+---
+
+pki:
+  user: root
+  md: sha256
+  type: RSA
+  keysize: 2048
+  days: 4380
+  crl_days: 365
+  defaults:
+    md: sha256
+    keysize: 2048
+    days: 825

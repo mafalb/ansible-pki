@@ -3,7 +3,7 @@
 - hosts: localhost
   vars:
     pki:
-      basepath: /tmp/simple-pki
+      path: /tmp/simple-pki
   roles:
 
     - role: pki
