@@ -28,7 +28,7 @@
     mode: 00700
 
 - name: create CSR
-  command: openssl req -new -config etc/{{ cnf }} -out certs/{{ alias }}.cert -passout file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ alias }}.passphrase
+  command: openssl req -new -config etc/{{ alias }}.cnf -out certs/{{ alias }}.cert -passout file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ alias }}.passphrase
   args:
     chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
     creates: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/csr/{{ alias }}.csr"
