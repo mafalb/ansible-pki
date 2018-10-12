@@ -1,0 +1,39 @@
+# vim: ft=yaml ts=2:
+---
+
+- debug: var=pki
+  tags:
+    - never
+    - debug
+
+- name: assertions
+  assert:
+    that:
+      - pki.dir|default(pki_defaults.dir) is defined
+      - pki.name is defined
+      - dest_dir is defined
+      - pki_name is defined
+
+- name: the Certificate is published in PEM format
+  copy:
+    src: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs/{{ pki_name }}.cert"
+    dest: "{{ dest_dir }}/{{ pki_name }}.pem"
+    backup: true
+
+- name: the Certificate is published in DER format
+  copy:
+    src: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs/{{ pki_name }}.cer"
+    dest: "{{ dest_dir }}/{{ pki_name }}.cer"
+    backup: true
+
+- name: CRL is published
+  copy:
+    src: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/crl/{{ pki.name }}.crl.pem"
+    dest: "{{ dest_dir }}/{{ pki.name }}.crl.pem"
+    backup: true
+
+- name: CRL is published
+  copy:
+    src: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/crl/{{ pki.name }}.crl"
+    dest: "{{ dest_dir }}/{{ pki.name }}.crl"
+    backup: true

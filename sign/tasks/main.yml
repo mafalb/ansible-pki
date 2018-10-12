@@ -1,0 +1,28 @@
+# vim: ft=yaml ts=2:
+---
+
+- debug: var=pki
+  tags:
+    - never
+    - debug
+
+- name: assertions
+  assert:
+    that:
+      - pki.dir|default(pki_defaults.dir) is defined
+      - pki.name is defined
+      - in is defined
+      - out is defined
+      - extensions is defined
+
+- name: the csr is signed
+  command: openssl ca -batch -config etc/openssl.cnf -in req/{{ in }} -out certs/{{ out }}.cert -extensions {{ extensions }} -passin file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ pki.name }}.passphrase
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    creates: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs/{{ out }}.cert"
+
+- name: create DER
+  command: openssl x509 -in certs/{{ out }}.cert -outform DER -out certs/{{ out }}.cer
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    creates: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs/{{ out }}.cer"

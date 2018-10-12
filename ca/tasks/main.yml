@@ -1,0 +1,99 @@
+# vim: ft=yaml ts=2:
+---
+
+- debug: var=pki
+  tags:
+    - never
+    - debug
+
+- assert:
+    that:
+      - pki.dir|default(pki_defaults.dir) is defined
+      - pki.name is defined
+      - pki.dn is defined
+
+- name: create directories
+  with_items:
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/etc"
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/req"
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/crl"
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs"
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/newcerts"
+    - "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/db"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ pki.owner }}"
+    group: "{{ pki.owner }}"
+    mode: 00770
+
+- name: create private directory for keys
+  file:
+    path: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private"
+    state: directory
+    mode: 00700
+
+- name: create config file for {{ pki.dn.CN }}
+  when: not pki.external_config_file
+  template:
+    src: "ca.conf.j2"
+    dest: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/etc/openssl.cnf"
+    backup: true
+
+- name: create config file for {{ pki.dn.CN }}
+  when: pki.external_config_file
+  template:
+    src: "{{ playbook_dir }}/{{ pki.external_config_file }}"
+    dest: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/etc/openssl.cnf"
+    backup: true
+
+- name: create dbs
+  with_items:
+    - db
+    - db.attr
+  copy:
+    content: ''
+    dest: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/db/{{ item }}"
+    force: false
+
+- name: create serials
+  with_items:
+    - cert.serial
+    - crl.serial
+  copy:
+    content: "01\n"
+    dest: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/db/{{ item }}"
+    force: false
+
+- name: generate passphrase for the private key
+  no_log: true
+  copy:
+    content: "{{ lookup('password', '/dev/null') }}"
+    dest: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ pki.name }}.passphrase"
+    force: false
+    mode: 00700
+
+- name: RSA key for {{ pki.dn.CN }} is present
+  no_log: true
+  when: pki.type == 'RSA'
+  command: openssl genrsa -aes256 -out private/{{ pki.name }}.key -passout file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ pki.name }}.passphrase {{ pki.keysize }}
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    creates: private/{{ pki.name }}.key
+
+- name: create csr
+  command: openssl req -new -config etc/openssl.cnf -{{ pki.md }} -out req/{{ pki.name }}.csr -key private/{{ pki.name }}.key -passin file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ pki.name }}.passphrase
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    creates: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/req/{{ pki.name }}.csr"
+
+- name: sign CA Root cert
+  when: pki.selfsigned == true
+  command: openssl ca -batch -selfsign -config etc/openssl.cnf -days {{ pki.days }} -md {{ pki.md }} -in req/{{ pki.name }}.csr -out certs/{{ pki.name }}.cert -extensions root_ca_ext -passin file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ pki.name }}.passphrase
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    creates: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs/{{ pki.name }}.cert"
+  notify:
+    - create DER
+    - create CRL

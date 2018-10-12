@@ -1,7 +1,8 @@
-#! vim: ft=yaml ts=2:
+# vim: ft=yaml ts=2:
 ---
 
 pki:
+  selfsigned: false
   user: root
   md: sha256
   type: RSA

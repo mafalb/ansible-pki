@@ -1,0 +1,8 @@
+# vim: ft=yaml ts=2:
+---
+
+- name: create DER
+  command: openssl x509 -in certs/{{ out }}.cert -outform DER -out certs/{{ out }}.cer
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    creates: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/certs/{{ out }}.cer"

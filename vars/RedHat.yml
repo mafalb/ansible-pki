@@ -1,5 +1,5 @@
-#! vim: ft=yaml ts=2:
+# vim: ft=yaml ts=2:
 ---
 
-pki:
+pki_defaults:
   dir: /etc/pki

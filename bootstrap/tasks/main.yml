@@ -1,0 +1,48 @@
+# vim: ft=yaml ts=2:
+---
+
+- debug: var=pki.dir
+  tags:
+    - never
+    - debug
+
+- debug: var=pki
+  tags:
+    - never
+    - debug
+
+- name: do some assertions
+  assert:
+    that:
+      - pki.dir|default(pki_defaults.dir) is defined
+      - pki.name is defined    
+      - pki.owner is defined    
+      - pki.authorized_keys is defined
+      - pki.authorized_keys is iterable
+      - pki.authorized_keys is not string
+
+- name: openssl is present
+  package:
+    name: openssl
+    state: present
+
+- name: unprivileged user for PKI does exist
+  user:
+    name: "{{ pki.owner }}"
+    generate_ssh_key: true
+    state: present
+
+- name: authorized_keys for ssh access does exist
+  with_items: "{{ pki.authorized_keys }}"
+  authorized_key:
+    user: "{{ pki.owner }}"
+    key: "{{ item }}"
+    state: present
+
+- name: directory for pki does exist
+  file:
+    path: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+    owner: "{{ pki.owner }}"
+    group: "{{ pki.owner }}"
+    mode: 00770
+    state: directory

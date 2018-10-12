@@ -1,0 +1,23 @@
+# vim: ft=yaml ts=2:
+---
+
+- debug: var=pki
+  tags:
+    - never
+    - debug
+
+- name: assertions
+  assert:
+    that:
+      - pki.dir|default(pki_defaults.dir) is defined
+      - pki.name is defined
+
+- name: crl PEM encoded
+  command: openssl ca -gencrl -config etc/openssl.cnf -out crl/{{ pki.name }}.crl.pem -passin file:{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}/private/.{{ pki.name }}.passphrase
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
+
+- name: crl DER encoded
+  command: openssl crl -outform DER -in crl/{{ pki.name }}.crl.pem -out crl/{{ pki.name }}.crl
+  args:
+    chdir: "{{ pki.dir|default(pki_defaults.dir) }}/{{ pki.name }}"
