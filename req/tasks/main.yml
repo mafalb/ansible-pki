@@ -11,9 +11,8 @@
     that:
       - pki.dir|default(pki_defaults.dir) is defined
       - pki.name is defined
-      - in is defined
-      - out is defined
-      - extensions is defined
+      - alias is defined
+      
 
 - name: generate passphrase for the private key
   no_log: true
