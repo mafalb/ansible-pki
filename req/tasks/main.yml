@@ -14,6 +14,11 @@
       - alias is defined
       
 
+- name: create cnf
+  template:
+    src: "{{ playbook_dir }}/{{ cnf }}"
+    dest: "{{ pki.dir }}/{{ pki.name }}/etc/{{ alias }}.cnf"
+
 - name: generate passphrase for the private key
   no_log: true
   copy:
