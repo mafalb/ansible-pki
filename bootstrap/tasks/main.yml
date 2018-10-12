@@ -31,6 +31,7 @@
     name: "{{ pki.owner }}"
     generate_ssh_key: true
     state: present
+    shell: /bin/bash
 
 - name: authorized_keys for ssh access does exist
   with_items: "{{ pki.authorized_keys }}"
